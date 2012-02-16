@@ -11,8 +11,6 @@ import name.richardson.james.bukkit.exchequer.DatabaseHandler;
 import name.richardson.james.bukkit.exchequer.general.PayCommand;
 import name.richardson.james.bukkit.exchequer.management.GrantCommand;
 import name.richardson.james.bukkit.exchequer.management.SetCommand;
-import name.richardson.james.bukkit.util.Plugin;
-import name.richardson.james.bukkit.util.command.CommandManager;
 
 
 // TODO: Auto-generated Javadoc
