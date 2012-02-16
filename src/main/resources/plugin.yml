@@ -1,0 +1,9 @@
+name: Exchequer
+main: name.richardson.james.bukkit.exchequer.Exchequer
+description: ${project.description}
+version: ${project.version}
+database: true
+commands:
+  ex:
+    description: 'Additional exchequer commands'
+
