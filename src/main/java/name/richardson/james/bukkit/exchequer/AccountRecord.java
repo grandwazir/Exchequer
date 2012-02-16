@@ -111,7 +111,7 @@ public class AccountRecord implements Balance {
    * @see name.richardson.james.bukkit.exchequer.Balance#contains(double)
    */
   public boolean contains(double amount) {
-    if (this.getBalance() <= amount) {
+    if (this.getBalance() >= amount) {
       return true;
     } else {
       return false;
