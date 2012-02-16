@@ -1,0 +1,4 @@
+Changelog for Exchequer (v0.0.1-SNAPSHOT)
+
+2012-02-16 03:51:00 +0000    updated for new BukkitUtilities (James Richardson)
+2012-02-16 03:49:26 +0000    initial commit (James Richardson)

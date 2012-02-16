@@ -2,7 +2,6 @@ package name.richardson.james.bukkit.exchequer.management;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -12,57 +11,55 @@ import org.bukkit.permissions.PermissionDefault;
 import name.richardson.james.bukkit.exchequer.AccountRecord;
 import name.richardson.james.bukkit.exchequer.Exchequer;
 import name.richardson.james.bukkit.exchequer.ExchequerHandler;
-import name.richardson.james.bukkit.util.command.CommandArgumentException;
-import name.richardson.james.bukkit.util.command.CommandPermissionException;
-import name.richardson.james.bukkit.util.command.CommandUsageException;
-import name.richardson.james.bukkit.util.command.PlayerCommand;
+import name.richardson.james.bukkit.utilities.command.CommandArgumentException;
+import name.richardson.james.bukkit.utilities.command.CommandPermissionException;
+import name.richardson.james.bukkit.utilities.command.CommandUsageException;
+import name.richardson.james.bukkit.utilities.command.ConsoleCommand;
+import name.richardson.james.bukkit.utilities.command.PluginCommand;
 
-public class SetCommand extends PlayerCommand {
-
-  public static final String NAME = "set";
-  public static final String DESCRIPTION = "Set the balance of an account.";
-  public static final String PERMISSION_DESCRIPTION = "Allow users to set the balance of accounts.";
-  public static final String USAGE = "<player | #account_number> <amount>";
-
-  public static final Permission PERMISSION = new Permission("exchequer.set", PERMISSION_DESCRIPTION, PermissionDefault.OP);
+@ConsoleCommand
+public class SetCommand extends PluginCommand {
 
   private final ExchequerHandler handler;
 
   public SetCommand(Exchequer plugin) {
-    super(plugin, NAME, DESCRIPTION, USAGE, PERMISSION_DESCRIPTION, PERMISSION);
+    super(plugin, plugin.getMessage("setcommand-name"), plugin.getMessage("setcommand-description"), plugin.getMessage("setcommand-usage"));
     this.handler = plugin.getHandler(SetCommand.class);
+    // register permissions
+    final String prefix = plugin.getDescription().getName().toLowerCase() + ".";
+    Permission base = new Permission(prefix + this.getName(), plugin.getMessage("setcommand-permission-description"), PermissionDefault.OP);
+    base.addParent(this.plugin.getRootPermission(), true);
+    this.addPermission(base);
   }
 
-  @Override
-  public void execute(CommandSender sender, Map<String, Object> arguments) throws CommandArgumentException, CommandPermissionException, CommandUsageException {
-    double amount = (Double) arguments.get("amount");
+  public void execute(CommandSender sender) throws CommandArgumentException, CommandPermissionException, CommandUsageException {
+    double amount = (Double) this.getArguments().get("amount");
     
-    if (amount < 0) throw new CommandArgumentException("Invalid amount specified!", "You may not set a negative balance.");
+    if (amount < 0) throw new CommandArgumentException(this.plugin.getMessage("setcommand-invalid-amount"), this.plugin.getMessage("may-not-set-negative-balance"));
     
-    if (arguments.containsKey("player")) {
-      String playerName = (String) arguments.get("player");
+    if (this.getArguments().containsKey("player")) {
+      String playerName = (String) this.getArguments().get("player");
       AccountRecord account = handler.getPlayerPersonalAccount(playerName);
-      if (account == null) throw new CommandUsageException("That player does not have a bank account!");
+      if (account == null) throw new CommandUsageException(String.format(this.plugin.getMessage("player-has-no-personal-account"), playerName));
       account.setBalance(amount);
       handler.save(account);
-      sender.sendMessage(String.format(ChatColor.GREEN + "%s's personal account set to %s.", playerName, handler.formatAmount(amount)));
-    } else if (arguments.containsKey("account")) {
-      int accountId = (Integer) arguments.get("account");
+      sender.sendMessage(String.format(ChatColor.GREEN + this.plugin.getMessage("setcommand-personal-account-success"), playerName, handler.formatAmount(amount)));
+    } else if (this.getArguments().containsKey("account")) {
+      int accountId = (Integer) this.getArguments().get("account");
       AccountRecord account = handler.getAccount(accountId);
-      if (account == null) throw new CommandUsageException("That account does not exist!");
+      if (account == null) throw new CommandUsageException(this.plugin.getMessage("account-does-not-exist"));
       account.setBalance(amount);
       handler.save(account);
-      sender.sendMessage(String.format(ChatColor.GREEN + "Account #%d balance set to %s.", accountId, handler.formatAmount(amount)));
+      sender.sendMessage(String.format(ChatColor.GREEN + this.plugin.getMessage("setcommand-bank-account-success"), accountId, handler.formatAmount(amount)));
     }
     
   }
   
-  @Override
-  public Map<String, Object> parseArguments(final List<String> arguments) throws CommandArgumentException {
+  public void parseArguments(final List<String> arguments, CommandSender sender) throws CommandArgumentException {
     HashMap<String, Object> map = new HashMap<String, Object>();
     
     if (arguments.isEmpty()) {
-      throw new CommandArgumentException("You must specify a valid player or account number!", "You should prefix account numbers with #.");
+      throw new CommandArgumentException(this.plugin.getMessage("specify-player-or-account"), this.plugin.getMessage("account-number-hint"));
     } else {
       try {
         String account = arguments.get(0);
@@ -72,17 +69,21 @@ public class SetCommand extends PlayerCommand {
           map.put("player", account);
         }
       } catch (NumberFormatException exception) {
-        throw new CommandArgumentException("You must specify a valid account number!", "You should prefix it with #.");
+        throw new CommandArgumentException(this.plugin.getMessage("specify-account-number"), this.plugin.getMessage("account-number-hint"));
       }
       try {
         map.put("amount", Double.parseDouble((arguments.get(1))));
       } catch (IndexOutOfBoundsException exception) {
-        throw new CommandArgumentException("You must specify an amount!", "This is how much you want to set the balance to.");
+        throw new CommandArgumentException(this.plugin.getMessage("specify-amount"), this.plugin.getMessage("specify-amount-hint"));
       } catch (NumberFormatException exception) {
-        throw new CommandArgumentException("You must specify an valid amount!", "Only numbers are valid.");    
+        throw new CommandArgumentException(this.plugin.getMessage("setcommand-invalid-amount"), this.plugin.getMessage("only-numbers-valid"));    
       }
     }
-    return map;
+    
+    this.setArguments(map);
+    
   }
+
+
   
 }

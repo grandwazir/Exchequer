@@ -5,6 +5,7 @@
   <artifactId>exchequer</artifactId>
   <name>Exchequer</name>
   <version>0.0.1-SNAPSHOT</version>
+  <description>A fully featured economy plugin.</description>
   <issueManagement>
     <system>GitHub</system>
     <url>https://github.com/grandwazir/Exchequer/issues</url>
@@ -95,7 +96,7 @@
     <dependency>
       <groupId>org.bukkit</groupId>
       <artifactId>bukkit</artifactId>
-      <version>1.1-R3</version>
+      <version>1.1-R4</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
