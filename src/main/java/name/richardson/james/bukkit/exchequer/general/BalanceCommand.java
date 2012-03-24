@@ -1,5 +1,6 @@
 package name.richardson.james.bukkit.exchequer.general;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,8 +27,12 @@ public class BalanceCommand extends PluginCommand {
   
   private final ExchequerHandler handler;
 
+  private String playerName;
+
+  private int accountNumber;
+  
   public BalanceCommand(Exchequer plugin) {
-    super(plugin, plugin.getMessage("balancecommand-name"), plugin.getMessage("balancecommand-description"), plugin.getMessage("balancecommand-usage"));
+    super(plugin);
     this.handler = plugin.getHandler(BalanceCommand.class);
     this.registerPermissions();
   }
@@ -51,64 +56,55 @@ public class BalanceCommand extends PluginCommand {
 
   public void execute(CommandSender sender) throws CommandArgumentException, CommandPermissionException, CommandUsageException {
   
-    if (getArguments().containsKey("player")) {
-      String playerName = (String) getArguments().get("player");
+    if (this.playerName != null) {
       // check to see if the player has permission to view other people's accounts
       if (!playerName.equalsIgnoreCase(sender.getName()) && !sender.hasPermission(this.getPermission(2))) {
         throw new CommandPermissionException(this.plugin.getMessage("balancecommand-others-not-allowed"), this.getPermission(2));
       }
+      
       // otherwise list all the accounts
       List<AccountRecord> accounts = handler.getPlayerAccounts(playerName);
-      if (accounts.isEmpty()) throw new CommandUsageException(String.format(this.plugin.getMessage("balancecommand-player-has-no-accounts"), playerName));
-      sender.sendMessage(String.format(ChatColor.LIGHT_PURPLE + this.plugin.getMessage("balancecommand-header"), playerName, accounts.size()));
-      double total = 0;
+      // throw exception they have no accounts
+      if (accounts.isEmpty()) throw new CommandUsageException(plugin.getSimpleFormattedMessage("balancecommand-player-has-no-accounts", playerName));
+      
+      // list all the accounts
+      sender.sendMessage(this.getFormattedBalanceHeader(accounts.size()));
+      BigDecimal total = new BigDecimal(0);
       for (AccountRecord account : accounts) {
-        total = total + account.getBalance();
-        sender.sendMessage(String.format(ChatColor.YELLOW + this.plugin.getMessage("balancecommand-account-detail"), account.getId(), handler.formatAmount(account.getBalance())));
+        Object[] tokens = {account.getId(), handler.formatAmount(account.getBalance())};
+        sender.sendMessage(this.plugin.getSimpleFormattedMessage("balancecommand-account-detail", tokens));
+        total = total.add(account.getBalance());
       }
-      sender.sendMessage(String.format(ChatColor.GREEN + this.plugin.getMessage("balancecommand-total"), handler.formatAmount(total)));
-    } else if (getArguments().containsKey("account")) {
-      int accountId = (Integer) getArguments().get("account");
-      AccountRecord account = handler.getAccount(accountId);
+      sender.sendMessage(this.plugin.getSimpleFormattedMessage("balancecommand-total", handler.formatAmount(total)));
+    } else if (this.accountNumber != 0) {
+      AccountRecord account = handler.getAccount(this.accountNumber);
       if (account == null) throw new CommandUsageException(this.plugin.getMessage("account-does-not-exist"));
+      
       // get a list of signatories
       Set<String> signatories = new HashSet<String>();
       for (PlayerRecord record : account.getSignatories()) {
         signatories.add(record.getPlayerName());
       }
+      
       // check to see if this person is allowed to view the balance of other people's accounts
       if (!signatories.contains(sender.getName()) && !sender.hasPermission(this.getPermission(2))) {
         throw new CommandPermissionException(this.plugin.getMessage("balancecommand-others-not-allowed"), this.getPermission(2));
       }
-      sender.sendMessage(String.format(ChatColor.LIGHT_PURPLE + this.plugin.getMessage("balancecommand-account-balance"), account.getId()));
-      sender.sendMessage(String.format(ChatColor.YELLOW + this.plugin.getMessage("balancecommand-account-signatories"), buildOwnerList(account)));
-      sender.sendMessage(String.format(ChatColor.GREEN + this.plugin.getMessage("balancecommand-total"), handler.formatAmount(account.getBalance())));
+      
+      sender.sendMessage(this.plugin.getSimpleFormattedMessage("balancecommand-account-balance", account.getId()));
+      sender.sendMessage(this.plugin.getSimpleFormattedMessage("balancecommand-account-signatories", buildOwnerList(account)));
+      sender.sendMessage(this.plugin.getSimpleFormattedMessage("balancecommand-total", handler.formatAmount(account.getBalance())));
     }
   
   }
 
-  public void parseArguments(final List<String> arguments, final CommandSender sender) throws CommandArgumentException {
-    HashMap<String, Object> map = new HashMap<String, Object>();
-    
-    if (arguments.isEmpty()) {
-      if (sender instanceof ConsoleCommandSender) throw new CommandArgumentException(this.plugin.getMessage("specify-player-or-account"), this.plugin.getMessage("account-number-hint"));
-      map.put("player", sender.getName());
-    } else {
-      try {
-        String account = arguments.get(0);
-        if (account.contains("#")) {
-          map.put("account", Integer.parseInt(account.replaceFirst("#", "")));
-        } else {
-          map.put("player", account);
-        }
-      } catch (NumberFormatException exception) {
-        throw new CommandArgumentException(this.plugin.getMessage("specify-account-number"), this.plugin.getMessage("account-number-hint"));
-      }
-    }
-    this.setArguments(map);
+  private String getFormattedBalanceHeader(int size) {
+    Object[] arguments = {size, this.playerName};
+    double[] limits = {0, 1, 2};
+    String[] formats = {this.getMessage("no-accounts"), this.getMessage("one-account"), this.getMessage("many-accounts")};
+    return this.getChoiceFormattedMessage("total-player-accounts", arguments, formats, limits);
   }
-  
-  
+
   private String buildOwnerList(AccountRecord account) {
     StringBuilder message = new StringBuilder();
     for (PlayerRecord record : account.getSignatories()) {
@@ -119,6 +115,29 @@ public class BalanceCommand extends PluginCommand {
     message.delete(message.length() - 2, message.length());
     message.append(".");
     return message.toString();
+  }
+
+  
+  public void parseArguments(String[] arguments, CommandSender sender) throws CommandArgumentException {
+    this.playerName = null;
+    this.accountNumber = 0;
+    
+    if (arguments.length == 0 && sender instanceof ConsoleCommandSender) {
+      throw new CommandArgumentException(this.plugin.getMessage("specify-player-or-account"), this.plugin.getMessage("account-number-hint"));
+    } else if (arguments.length == 1) {
+      if (arguments[0].startsWith("#")) {
+        try {
+          this.accountNumber = Integer.parseInt(arguments[0].replaceAll("#", ""));
+        } catch (NumberFormatException exception) {
+          throw new CommandArgumentException(this.plugin.getMessage("setcommand-invalid-amount"), this.plugin.getMessage("account-number-hint"));    
+        }
+      } else {
+        this.playerName = arguments[0];
+      }
+    } else {
+      this.playerName = sender.getName();
+    }
+    
   }
   
 }

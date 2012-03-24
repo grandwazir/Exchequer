@@ -1,5 +1,6 @@
 package name.richardson.james.bukkit.exchequer;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import javax.persistence.CascadeType;
@@ -64,8 +65,8 @@ public class PlayerRecord {
    * @param amount the amount
    * @return true, if successful
    */
-  public boolean contains(double amount) {
-    if (this.getBalance() <= amount) {
+  public boolean contains(BigDecimal amount) {
+    if (this.getBalance().compareTo(amount) != -1) {
       return true;
     } else {
       return false;
@@ -90,10 +91,10 @@ public class PlayerRecord {
    * 
    * @return the balance
    */
-  public double getBalance() {
-    double balance = 0;
+  public BigDecimal getBalance() {
+    BigDecimal balance = new BigDecimal("0");
     for (AccountRecord account : accounts) {
-      balance = balance + account.getBalance();
+      balance = balance.add(account.getBalance());
     }
     return balance;
   }

@@ -1,5 +1,7 @@
 package name.richardson.james.bukkit.exchequer;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.List;
@@ -15,9 +17,9 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
   /** The database. */
   private DatabaseHandler database;
 
-  /** The inital funds provided to newly registered players. */
-  private double initalFunds = 30;
-
+  /** The initial funds provided to newly registered players. */
+  private final BigDecimal initalFunds = new BigDecimal("30");
+  
   /**
    * Instantiates a new exchequer handler.
    * 
@@ -108,9 +110,36 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
     return AccountRecord.findAccountByID(database, accountId);
   }
 
-  public String formatAmount(double amount) {
-    DecimalFormat formatter = new DecimalFormat("##,###");
-    return formatter.format(amount) + " arms";
+  public String formatAmount(BigDecimal amount) {
+    StringBuilder message = new StringBuilder();
+    // format the major units
+    DecimalFormat majorFormatter = new DecimalFormat("##,###;-##.###");
+    majorFormatter.setRoundingMode(RoundingMode.DOWN);
+    String major = majorFormatter.format(amount);
+    message.append(major);
+    int unitAmount = Integer.parseInt(major);
+    if (unitAmount != 1 && unitAmount != -1) {
+      message.append(" arms");
+    } else {
+      message.append(" arm");
+    }
+    // format the minor units
+    DecimalFormat minorFormatter = new DecimalFormat(".##;-.##");
+    minorFormatter.setMaximumIntegerDigits(0);
+    minorFormatter.setMinimumIntegerDigits(0);
+    String minor = minorFormatter.format(amount);
+    minor = minor.replaceFirst(".", "");
+    unitAmount = Integer.parseInt(minor);
+    if (unitAmount != 0) {
+      message.append(", ");
+      message.append(unitAmount);
+      if (unitAmount != 1 && unitAmount != -1) {
+        message.append(" legs");
+      } else {
+        message.append(" leg");
+      }
+    }
+    return message.toString();
   }
 
 }

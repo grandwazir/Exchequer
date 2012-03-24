@@ -1,5 +1,6 @@
 package name.richardson.james.bukkit.exchequer.management;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 
@@ -19,11 +20,23 @@ import name.richardson.james.bukkit.utilities.command.PluginCommand;
 
 @ConsoleCommand
 public class SetCommand extends PluginCommand {
-
+  
+  /* The account to target  */
+  private AccountRecord account;
+  
+  /* The id of the account to target  */
+  private int accountNumber;
+  
+  /* The name of the player to target */
+  private String playerName;
+  
+  /* The amount of money to set the balance to */
+  private BigDecimal amount;
+  
   private final ExchequerHandler handler;
 
   public SetCommand(Exchequer plugin) {
-    super(plugin, plugin.getMessage("setcommand-name"), plugin.getMessage("setcommand-description"), plugin.getMessage("setcommand-usage"));
+    super(plugin);
     this.handler = plugin.getHandler(SetCommand.class);
     // register permissions
     final String prefix = plugin.getDescription().getName().toLowerCase() + ".";
@@ -33,57 +46,62 @@ public class SetCommand extends PluginCommand {
   }
 
   public void execute(CommandSender sender) throws CommandArgumentException, CommandPermissionException, CommandUsageException {
-    double amount = (Double) this.getArguments().get("amount");
-    
-    if (amount < 0) throw new CommandArgumentException(this.plugin.getMessage("setcommand-invalid-amount"), this.plugin.getMessage("may-not-set-negative-balance"));
-    
-    if (this.getArguments().containsKey("player")) {
-      String playerName = (String) this.getArguments().get("player");
-      AccountRecord account = handler.getPlayerPersonalAccount(playerName);
-      if (account == null) throw new CommandUsageException(String.format(this.plugin.getMessage("player-has-no-personal-account"), playerName));
-      account.setBalance(amount);
-      handler.save(account);
-      sender.sendMessage(String.format(ChatColor.GREEN + this.plugin.getMessage("setcommand-personal-account-success"), playerName, handler.formatAmount(amount)));
-    } else if (this.getArguments().containsKey("account")) {
-      int accountId = (Integer) this.getArguments().get("account");
-      AccountRecord account = handler.getAccount(accountId);
+
+    if (playerName != null) {
+      account = handler.getPlayerPersonalAccount(playerName);
+      if (account == null) throw new CommandUsageException(this.plugin.getSimpleFormattedMessage("player-has-no-personal-account", playerName));
+      this.alterBalance();
+      Object[] tokens = {playerName, handler.formatAmount(account.getBalance())};
+      sender.sendMessage(plugin.getSimpleFormattedMessage("setcommand-personal-account-success", tokens));
+    } else {
+      account = handler.getAccount(accountNumber);
       if (account == null) throw new CommandUsageException(this.plugin.getMessage("account-does-not-exist"));
-      account.setBalance(amount);
-      handler.save(account);
-      sender.sendMessage(String.format(ChatColor.GREEN + this.plugin.getMessage("setcommand-bank-account-success"), accountId, handler.formatAmount(amount)));
+      this.alterBalance();
+      Object[] tokens = {accountNumber, handler.formatAmount(account.getBalance())};
+      sender.sendMessage(plugin.getSimpleFormattedMessage("setcommand-bank-account-success", tokens));
     }
     
   }
   
-  public void parseArguments(final List<String> arguments, CommandSender sender) throws CommandArgumentException {
-    HashMap<String, Object> map = new HashMap<String, Object>();
+  private void alterBalance() throws CommandUsageException {
+    try {
+      account.setBalance(amount);
+    } catch (IllegalArgumentException exception) {
+      throw new CommandUsageException(plugin.getMessage(exception.getMessage()));
+    }
+    handler.save(account);
+  }
+  
+  public void parseArguments(final String[] args, CommandSender sender) throws CommandArgumentException {
+    this.playerName = null;
+    this.accountNumber = 0;
+    this.amount = null;
     
-    if (arguments.isEmpty()) {
-      throw new CommandArgumentException(this.plugin.getMessage("specify-player-or-account"), this.plugin.getMessage("account-number-hint"));
+    if (args.length == 0) throw new CommandArgumentException(this.plugin.getMessage("specify-player-or-account"), this.plugin.getMessage("specify-player-hint"));
+    
+    // get the target account
+    if (args[0].startsWith("#")) {
+      try {
+        this.accountNumber = Integer.parseInt(args[0].replaceAll("#", ""));
+      } catch (NumberFormatException exception) {
+        throw new CommandArgumentException(this.plugin.getMessage("specify-player-or-account"), this.plugin.getMessage("only-numbers-valid"));    
+      }
     } else {
-      try {
-        String account = arguments.get(0);
-        if (account.contains("#")) {
-          map.put("account", Integer.parseInt(account.replaceFirst("#", "")));
-        } else {
-          map.put("player", account);
-        }
-      } catch (NumberFormatException exception) {
-        throw new CommandArgumentException(this.plugin.getMessage("specify-account-number"), this.plugin.getMessage("account-number-hint"));
-      }
-      try {
-        map.put("amount", Double.parseDouble((arguments.get(1))));
-      } catch (IndexOutOfBoundsException exception) {
-        throw new CommandArgumentException(this.plugin.getMessage("specify-amount"), this.plugin.getMessage("specify-amount-hint"));
-      } catch (NumberFormatException exception) {
-        throw new CommandArgumentException(this.plugin.getMessage("setcommand-invalid-amount"), this.plugin.getMessage("only-numbers-valid"));    
-      }
+      this.playerName = args[0];
     }
     
-    this.setArguments(map);
+    // get the amount
+    if (args.length == 2) {
+      try {
+        this.amount = new BigDecimal(args[1], AccountRecord.MATH_CONTEXT);
+      } catch (NumberFormatException exception) {
+        throw new CommandArgumentException(this.plugin.getMessage("specify-amount"), this.plugin.getMessage("only-numbers-valid"));    
+      }
+    } else {
+      throw new CommandArgumentException(this.plugin.getMessage("specify-amount"), this.plugin.getMessage("specify-amount-hint"));
+    }
     
   }
-
-
+  
   
 }

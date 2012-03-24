@@ -1,5 +1,8 @@
 package name.richardson.james.bukkit.exchequer;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.List;
 
 import javax.persistence.Entity;
@@ -22,7 +25,9 @@ public class AccountRecord implements Balance {
 
   /** The logger for this class. */
   public static final Logger logger = new Logger(AccountRecord.class);
-
+  
+  public static final MathContext MATH_CONTEXT = new MathContext(16, RoundingMode.UNNECESSARY);
+  
   /**
    * The id (primary key) of the account. Also referenced as the account number
    * and used in various commands.
@@ -32,7 +37,7 @@ public class AccountRecord implements Balance {
 
   /** The current balance of the account. */
   @NotNull
-  private double balance;
+  private BigDecimal balance;
 
   /** If the account is hidden or not. */
   @NotNull
@@ -68,11 +73,9 @@ public class AccountRecord implements Balance {
    * (non-Javadoc)
    * @see name.richardson.james.bukkit.exchequer.Balance#add(double)
    */
-  public double add(double amount) {
-    double proposal = this.getBalance() + amount;
-    if (proposal < 0)
-      throw new IllegalArgumentException("Balances can not be negative.");
-    this.setBalance(proposal);
+  public BigDecimal add(BigDecimal amount) {
+    if (this.getBalance().add(amount).intValue() < 0) throw new IllegalArgumentException("may-not-set-negative-balance");
+    this.setBalance(this.getBalance().add(amount));
     return this.getBalance();
   }
 
@@ -80,11 +83,9 @@ public class AccountRecord implements Balance {
    * (non-Javadoc)
    * @see name.richardson.james.bukkit.exchequer.Balance#substract(double)
    */
-  public double substract(double amount) {
-    double proposal = this.getBalance() - amount;
-    if (proposal < 0)
-      throw new IllegalArgumentException("Balances can not be negative.");
-    this.setBalance(proposal);
+  public BigDecimal subtract(BigDecimal amount) {
+    if (this.getBalance().subtract(amount).intValue() < 0) throw new IllegalArgumentException("may-not-set-negative-balance");
+    this.setBalance(this.getBalance().subtract(amount));
     return this.getBalance();
   }
 
@@ -92,8 +93,8 @@ public class AccountRecord implements Balance {
    * (non-Javadoc)
    * @see name.richardson.james.bukkit.exchequer.Balance#divide(double)
    */
-  public double divide(double amount) {
-    this.setBalance(this.getBalance() / amount);
+  public BigDecimal divide(BigDecimal amount) {
+    this.setBalance(this.getBalance().divide(amount));
     return this.getBalance();
   }
 
@@ -101,8 +102,8 @@ public class AccountRecord implements Balance {
    * (non-Javadoc)
    * @see name.richardson.james.bukkit.exchequer.Balance#multiply(double)
    */
-  public double multiply(double amount) {
-    this.setBalance(this.getBalance() * amount);
+  public BigDecimal multiply(BigDecimal amount) {
+    this.setBalance(this.getBalance().multiply(amount));
     return this.getBalance();
   }
 
@@ -110,8 +111,8 @@ public class AccountRecord implements Balance {
    * (non-Javadoc)
    * @see name.richardson.james.bukkit.exchequer.Balance#contains(double)
    */
-  public boolean contains(double amount) {
-    if (this.getBalance() >= amount) {
+  public boolean contains(BigDecimal amount) {
+    if (this.getBalance().compareTo(amount) != -1) {
       return true;
     } else {
       return false;
@@ -180,7 +181,7 @@ public class AccountRecord implements Balance {
    * 
    * @return the total available funds in this account.
    */
-  public double getBalance() {
+  public BigDecimal getBalance() {
     return balance;
   }
 
@@ -189,7 +190,7 @@ public class AccountRecord implements Balance {
    * 
    * @param balance the new balance.
    */
-  public void setBalance(double balance) {
+  public void setBalance(BigDecimal balance) {
     this.balance = balance;
   }
 
