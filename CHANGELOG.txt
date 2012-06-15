@@ -1,5 +1,6 @@
 Changelog for Exchequer (v1.0.0-SNAPSHOT)
 
+2012-06-15 22:21:51 +0100    updated to include auto updater (James Richardson)
 2012-03-24 23:51:46 +0000    big ugly commit - ignore me :D (James Richardson)
 2012-02-16 18:14:24 +0000    remove target directory from repo (James Richardson)
 2012-02-16 18:13:55 +0000    fix bug with getBalance reporting false when they do have enough funds (James Richardson)
