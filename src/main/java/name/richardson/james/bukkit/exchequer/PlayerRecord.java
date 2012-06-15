@@ -142,7 +142,7 @@ public class PlayerRecord {
    * @param playerName the player name to search for
    * @return the PlayerRecord found or null if no record was found.
    */
-  public static PlayerRecord findByPlayerName(DatabaseHandler database, String playerName) {
+  public static PlayerRecord findByPlayerName(final Database database, String playerName) {
     logger.debug(String.format("Attempting to return PlayerRecord matching the name %s.", playerName));
     final PlayerRecord record = database.getEbeanServer().find(PlayerRecord.class).where().ieq("playerName", playerName).findUnique();
     return record;

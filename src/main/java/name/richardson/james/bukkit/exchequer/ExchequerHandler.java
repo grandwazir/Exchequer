@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 import name.richardson.james.bukkit.utilities.internals.Handler;
+import name.richardson.james.bukkit.utilities.internals.Logger;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -14,11 +15,12 @@ import name.richardson.james.bukkit.utilities.internals.Handler;
  */
 public class ExchequerHandler extends Handler implements ExchequerAPI {
 
-  /** The database. */
-  private DatabaseHandler database;
-
+  private static final Logger logger = new Logger(ExchequerHandler.class);
+  
   /** The initial funds provided to newly registered players. */
   private final BigDecimal initalFunds = new BigDecimal("30");
+
+  private Exchequer plugin;
   
   /**
    * Instantiates a new exchequer handler.
@@ -28,7 +30,7 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
    */
   public ExchequerHandler(Exchequer plugin, Class<?> parentClass) {
     super(parentClass);
-    this.database = plugin.getDatabaseHandler();
+    this.plugin = plugin;
   }
 
   /*
@@ -38,7 +40,8 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
    * .lang.String)
    */
   public List<AccountRecord> getPlayerAccounts(String playerName) {
-    PlayerRecord record = PlayerRecord.findByPlayerName(database, playerName);
+    logger.info("Getting player accounts for " + playerName);
+    PlayerRecord record = PlayerRecord.findByPlayerName(plugin.getDatabaseHandler(), playerName);
     if (record == null)
       return Collections.emptyList();
     return record.getAccounts();
@@ -51,9 +54,9 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
    * (java.lang.String)
    */
   public AccountRecord getPlayerPersonalAccount(String playerName) {
-    PlayerRecord record = PlayerRecord.findByPlayerName(database, playerName);
-    if (record == null)
-      return null;
+    logger.info("Getting personal account for " + playerName);
+    PlayerRecord record = PlayerRecord.findByPlayerName(plugin.getDatabaseHandler(), playerName);
+    if (record == null) return null;
     return record.getPersonalAccount();
   }
 
@@ -64,7 +67,8 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
    * java.lang.String)
    */
   public boolean isPlayerRegistered(String playerName) {
-    return PlayerRecord.isPlayerKnown(database, playerName);
+    logger.info("Checking if player is registered: " + playerName);
+    return PlayerRecord.isPlayerKnown(plugin.getDatabaseHandler(), playerName);
   }
 
   /*
@@ -74,9 +78,10 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
    * .lang.String)
    */
   public PlayerRecord registerPlayer(String playerName) {
-    if (PlayerRecord.isPlayerKnown(database, playerName)) {
-      return PlayerRecord.findByPlayerName(database, playerName);
+    if (PlayerRecord.isPlayerKnown(plugin.getDatabaseHandler(), playerName)) {
+      return PlayerRecord.findByPlayerName(plugin.getDatabaseHandler(), playerName);
     } else {
+      DatabaseHandler database = plugin.getDatabaseHandler();
       PlayerRecord record = new PlayerRecord();
       record.setPlayerName(playerName);
       database.save(record);
@@ -102,12 +107,13 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
    * name.richardson.james.bukkit.exchequer.ExchequerAPI#save(java.lang.Object)
    */
   public boolean save(Object record) {
-    database.save(record);
+    logger.info("Saving record.");
+    plugin.getDatabaseHandler().save(record);
     return true;
   }
 
   public AccountRecord getAccount(int accountId) {
-    return AccountRecord.findAccountByID(database, accountId);
+    return AccountRecord.findAccountByID(plugin.getDatabaseHandler(), accountId);
   }
 
   public String formatAmount(BigDecimal amount) {
@@ -117,7 +123,7 @@ public class ExchequerHandler extends Handler implements ExchequerAPI {
     majorFormatter.setRoundingMode(RoundingMode.DOWN);
     String major = majorFormatter.format(amount);
     message.append(major);
-    int unitAmount = Integer.parseInt(major);
+    int unitAmount = amount.intValue();
     if (unitAmount != 1 && unitAmount != -1) {
       message.append(" arms");
     } else {
