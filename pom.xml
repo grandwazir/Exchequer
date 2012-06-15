@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>name.richardson.james.bukkit</groupId>
   <artifactId>exchequer</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1-SNAPSHOT</version>
   <name>Exchequer</name>
   <description>A fully featured economy plugin.</description>
 
